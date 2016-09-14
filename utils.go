@@ -161,6 +161,7 @@ func get_ids_for_hostname(hostname string, server_list Servers) []string {
 }
 
 func get_ids_for_pattern(pattern string, server_list Servers) []string {
+	filtered := make([]string, len(server_list.List))
 	for i, l := range server_list.List {
 		if strings.Contains(l.Hostname, pattern) {
 			filtered[i] = l.Id
