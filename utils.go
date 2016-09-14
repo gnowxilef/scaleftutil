@@ -21,7 +21,7 @@ func DeleteServersByHostname(hostname string) error {
 	key_team := os.Getenv("SCALEFT_TEAM")
 	project := os.Getenv("SCALEFT_PROJECT")
 
-	log.Printf("[DEBUG] key_id:%s key_secret:%s key_team:%s project:%s hostname:%s", key_id, key_secret, key_team, project, hostname)
+	//log.Printf("[DEBUG] key_id:%s key_secret:%s key_team:%s project:%s hostname:%s", key_id, key_secret, key_team, project, hostname)
 
 	bearer, err := get_token(key_id, key_secret, key_team)
 	if err != nil {
@@ -47,6 +47,46 @@ func DeleteServersByHostname(hostname string) error {
 		err := delete_server(bearer, key_team, project, id)
 		if err != nil {
 			log.Printf("[WARN] Failed to delete server with hostname: %s at ScaleFT ID:%s, error:%s", hostname, id, err)
+			//              return fmt.Errorf("Error deleting server at id:%s and key_team:%s project: %s error:%v", id, key_team, project, err)
+		}
+	}
+
+	return nil
+}
+
+func DeleteServersByPattern(pattern string) error {
+
+	key_id := os.Getenv("SCALEFT_KEY_ID")
+	key_secret := os.Getenv("SCALEFT_KEY_SECRET")
+	key_team := os.Getenv("SCALEFT_TEAM")
+	project := os.Getenv("SCALEFT_PROJECT")
+
+	// log.Printf("[DEBUG] key_id:%s key_secret:%s key_team:%s project:%s hostname:%s", key_id, key_secret, key_team, project, hostname)
+
+	bearer, err := get_token(key_id, key_secret, key_team)
+	if err != nil {
+		return fmt.Errorf("Error getting token key_id:%s key_team:%s error:%v", key_id, key_team, err)
+	}
+
+	list, err := get_servers(bearer, key_team, project)
+
+	if err != nil {
+		return fmt.Errorf("Error getting server list. key_team:%s error:%v", key_team, err)
+	}
+
+	ids := get_ids_for_pattern(pattern, list)
+
+	if len(ids) == 0 {
+		//      return fmt.Errorf("Error, ScaleFT api returned no servers that matched hostname:%s", hostname)
+		//      This should not happen, but if it does, it's ok?
+		log.Printf("[WARN] No servers matched for pattern:%s, Team:%s, Project:%s.  We'll keep going though.", pattern, key_team, project)
+		return nil
+	}
+
+	for _, id := range ids {
+		err := delete_server(bearer, key_team, project, id)
+		if err != nil {
+			log.Printf("[WARN] Failed to delete server with ScaleFT ID:%s, error:%s", id, err)
 			//              return fmt.Errorf("Error deleting server at id:%s and key_team:%s project: %s error:%v", id, key_team, project, err)
 		}
 	}
