@@ -27,8 +27,7 @@ func request(method string, url_part string, params *bytes.Buffer) (*http.Respon
 
 	req, err := http.NewRequest(method, url, params)
 	req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", get_token))
-	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", get_token))
 	resp, err := client.Do(req)
 
 	return resp, err
@@ -38,7 +37,7 @@ func DeleteServersByHostname(hostname string) error {
 
 	//log.Printf("[DEBUG] key_id:%s key_secret:%s key_team:%s project:%s hostname:%s", key_id, key_secret, key_team, project, hostname)
 
-	list, err := get_servers
+	list, err := get_servers()
 
 	if err != nil {
 		return fmt.Errorf("Error getting server list. key_team:%s error:%v", key_team, err)
@@ -68,7 +67,7 @@ func DeleteServersByPattern(pattern string) error {
 
 	// log.Printf("[DEBUG] key_id:%s key_secret:%s key_team:%s project:%s hostname:%s", key_id, key_secret, key_team, project, hostname)
 
-	list, err := get_servers
+	list, err := get_servers()
 
 	if err != nil {
 		return fmt.Errorf("Error getting server list. key_team:%s error:%v", key_team, err)
@@ -139,7 +138,7 @@ func get_token() (string, error) {
 	return b.Bearer_token, err
 }
 
-func get_logs(bearer_token string, key_team string) string {
+func get_logs() string {
 	resp, err := request("GET", fmt.Sprintf("%v/audits", key_team), nil)
 	if err != nil {
 		panic(err)
@@ -149,10 +148,11 @@ func get_logs(bearer_token string, key_team string) string {
 	return s
 }
 
-func get_servers (Servers, error) {
+func get_servers() (Servers, error) {
 	resp, err := request("GET", fmt.Sprintf("%v/projects/%v/servers", key_team, project), nil)
 	if err != nil {
-		fmt.Errorf("Error listing servers - key_team: %s, project: %s, status: %s, error: %v", key_team, project, string(resp.Status), err)
+		fmt.Sprintf("Error listing servers - key_team: %s, project: %s, status: %s, error: %v", key_team, project, string(resp.Status), err)
+		panic(err)
 	}
 
 	s := struct {
