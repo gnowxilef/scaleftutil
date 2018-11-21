@@ -12,23 +12,33 @@ import (
 	"time"
 )
 
-const api string = "https://app.scaleft.com/v1/teams/"
+var key_id = os.Getenv("SCALEFT_KEY_ID")
+var key_secret = os.Getenv("SCALEFT_KEY_SECRET")
+var token = ""
+
+var key_team = os.Getenv("SCALEFT_TEAM")
+var project = os.Getenv("SCALEFT_PROJECT")
+
+const api_url string = "https://app.scaleft.com/v1/"
+
+func request(method string, url_part string, params *bytes.Buffer) (*http.Response, error) {
+	client := &http.Client{}
+	url := fmt.Sprintf("%v/%v", api_url, url_part)
+
+	req, err := http.NewRequest(method, url, params)
+	req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %v", get_token))
+	}
+	resp, err := client.Do(req)
+
+	return resp, err
+}
 
 func DeleteServersByHostname(hostname string) error {
 
-	key_id := os.Getenv("SCALEFT_KEY_ID")
-	key_secret := os.Getenv("SCALEFT_KEY_SECRET")
-	key_team := os.Getenv("SCALEFT_TEAM")
-	project := os.Getenv("SCALEFT_PROJECT")
-
 	//log.Printf("[DEBUG] key_id:%s key_secret:%s key_team:%s project:%s hostname:%s", key_id, key_secret, key_team, project, hostname)
 
-	bearer, err := get_token(key_id, key_secret, key_team)
-	if err != nil {
-		return fmt.Errorf("Error getting token key_id:%s key_team:%s error:%v", key_id, key_team, err)
-	}
-
-	list, err := get_servers(bearer, key_team, project)
+	list, err := get_servers
 
 	if err != nil {
 		return fmt.Errorf("Error getting server list. key_team:%s error:%v", key_team, err)
@@ -44,7 +54,7 @@ func DeleteServersByHostname(hostname string) error {
 	}
 
 	for _, id := range ids {
-		err := delete_server(bearer, key_team, project, id)
+		err := delete_server(id)
 		if err != nil {
 			log.Printf("[WARN] Failed to delete server with hostname: %s at ScaleFT ID:%s, error:%s", hostname, id, err)
 			//              return fmt.Errorf("Error deleting server at id:%s and key_team:%s project: %s error:%v", id, key_team, project, err)
@@ -56,19 +66,9 @@ func DeleteServersByHostname(hostname string) error {
 
 func DeleteServersByPattern(pattern string) error {
 
-	key_id := os.Getenv("SCALEFT_KEY_ID")
-	key_secret := os.Getenv("SCALEFT_KEY_SECRET")
-	key_team := os.Getenv("SCALEFT_TEAM")
-	project := os.Getenv("SCALEFT_PROJECT")
-
 	// log.Printf("[DEBUG] key_id:%s key_secret:%s key_team:%s project:%s hostname:%s", key_id, key_secret, key_team, project, hostname)
 
-	bearer, err := get_token(key_id, key_secret, key_team)
-	if err != nil {
-		return fmt.Errorf("Error getting token key_id:%s key_team:%s error:%v", key_id, key_team, err)
-	}
-
-	list, err := get_servers(bearer, key_team, project)
+	list, err := get_servers
 
 	if err != nil {
 		return fmt.Errorf("Error getting server list. key_team:%s error:%v", key_team, err)
@@ -84,7 +84,7 @@ func DeleteServersByPattern(pattern string) error {
 	}
 
 	for _, id := range ids {
-		err := delete_server(bearer, key_team, project, id)
+		err := delete_server(id)
 		if err != nil {
 			log.Printf("[WARN] Failed to delete server with ScaleFT ID:%s, error:%s", id, err)
 			//              return fmt.Errorf("Error deleting server at id:%s and key_team:%s project: %s error:%v", id, key_team, project, err)
@@ -123,14 +123,10 @@ type Servers struct {
 	List []*Server `json:"list"`
 }
 
-func get_token(key_id string, key_secret string, key_team string) (string, error) {
+func get_token() (string, error) {
 	p := &Body{key_id, key_secret}
 	jsonStr, err := json.Marshal(p)
-	url := api + key_team + "/service_token"
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := request("POST", fmt.Sprintf("%v/service_token", key_team), bytes.NewBuffer(jsonStr))
 
 	if err != nil {
 		return "error", fmt.Errorf("Error getting token key_id:%s key_team:%s status:%s error:%v", key_id, key_team, string(resp.Status), err)
@@ -144,12 +140,7 @@ func get_token(key_id string, key_secret string, key_team string) (string, error
 }
 
 func get_logs(bearer_token string, key_team string) string {
-	client := &http.Client{}
-	url := api + key_team + "/audits"
-	req, err := http.NewRequest("GET", url, nil)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+bearer_token)
-	resp, err := client.Do(req)
+	resp, err := request("GET", fmt.Sprintf("%v/audits", key_team), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -158,15 +149,10 @@ func get_logs(bearer_token string, key_team string) string {
 	return s
 }
 
-func get_servers(bearer_token string, key_team string, project string) (Servers, error) {
-	client := &http.Client{}
-	url := api + key_team + "/projects/" + project + "/servers"
-	req, err := http.NewRequest("GET", url, nil)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+bearer_token)
-	resp, err := client.Do(req)
+func get_servers (Servers, error) {
+	resp, err := request("GET", fmt.Sprintf("%v/projects/%v/servers", key_team, project), nil)
 	if err != nil {
-		fmt.Errorf("Error listing servers: key_team:%s project: %s status:%s error:%v", key_team, project, string(resp.Status), err)
+		fmt.Errorf("Error listing servers - key_team: %s, project: %s, status: %s, error: %v", key_team, project, string(resp.Status), err)
 	}
 
 	s := struct {
@@ -174,18 +160,14 @@ func get_servers(bearer_token string, key_team string, project string) (Servers,
 	}{nil}
 
 	json.NewDecoder(resp.Body).Decode(&s)
+
 	return s, err
 }
 
-func delete_server(bearer_token string, key_team string, project string, server_id string) error {
-	client := &http.Client{}
-	url := api + key_team + "/projects/" + project + "/servers/" + server_id
-	req, err := http.NewRequest("DELETE", url, nil)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+bearer_token)
-	resp, err := client.Do(req)
+func delete_server(server_id string) error {
+	resp, err := request("DELETE", fmt.Sprintf("%v/projects/%v/servers/%v", key_team, project, server_id), nil)
 	if err != nil {
-		return fmt.Errorf("Error deleting server:%s status:%s error:%v", server_id, string(resp.Status), err)
+		return fmt.Errorf("Error deleting server: %s - status: %s, error: %v", server_id, string(resp.Status), err)
 	}
 	return nil
 }
